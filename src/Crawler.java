@@ -1,9 +1,9 @@
 import org.openqa.selenium.*;
 
 import java.util.AbstractMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -27,19 +27,19 @@ public class Crawler implements WebCrawler<String> {
      * @return a list of weburl initialized with the url and the depth
      */
     public List<WebUrl> extractLinks(WebElement d){
-        Map<String, String> urls=new HashMap<>();
+        ConcurrentHashMap<String, String> urls=new ConcurrentHashMap<>();
         List<WebElement> links=d.findElements(By.tagName("a"));
-        for(WebElement link: links){
+        links.parallelStream().forEach(link -> {
             try{
                 String url=link.getAttribute("href");
-                if(url!=null && (url= Controller.removeSchemaAndWWW(url))!=null){
+                if(url!=null && (url=Controller.removeSchemaAndWWW(url))!=null){
                     url=url.replaceAll("\\/$", "");
                     urls.put(url, url);
                 }
             }catch (StaleElementReferenceException e){
                 e.printStackTrace();
             }
-        }
+        });
         return urls.keySet().stream()
                 .map(u -> new WebUrl(u, this.url.getDepth()+1))
                 .collect(Collectors.toList());
@@ -80,10 +80,11 @@ public class Crawler implements WebCrawler<String> {
     public Map.Entry<WebUrl, String> use(WebDriver driver) {
         try {
             try {
-                driver.get("http://" + url.getDomain());
+                driver.get("http://www." + url.getDomain());
             }catch(WebDriverException e){
-                System.out.println(url.getDomain());
-                driver.get("https://" + url.getDomain());
+                System.out.println("trying https: "+ url.getDomain());
+                driver.get("https://www." + url.getDomain());
+                System.out.println("https ok");
             }
             //driver.get(url.getDomain());
             try {
@@ -94,7 +95,7 @@ public class Crawler implements WebCrawler<String> {
 
             //to manage redirects
             var currUrl=driver.getCurrentUrl();
-            currUrl= Controller.removeSchemaAndWWW(currUrl);
+            currUrl=Controller.removeSchemaAndWWW(currUrl);
             if(currUrl!=null) {
                 currUrl = currUrl.replaceAll("\\/$", "");
                 url = new WebUrl(currUrl, url.getDepth());

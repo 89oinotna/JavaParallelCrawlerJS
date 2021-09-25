@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  */
 public class Controller implements Callable<List<WebPage>> {
    // private static final int driversNum=4;
-    private static final int driversNum=2;
+    private static final int driversNum=5;
     private static final BlockingQueue<WebDriver> drivers=new LinkedBlockingQueue<>(driversNum);
     static {
         try {
@@ -215,14 +215,15 @@ public class Controller implements Callable<List<WebPage>> {
                     //store results
 
                     var p=urls.get(res.getKey().getDomain());
-                    if(urls.size() == 1) { //the first time we need to check if there was a redirect
-                        if(p==null){
+                    if(urls.size() == 1 && p==null) { //the first time we need to check if there was a redirect
+
                             p=new WebPage(res.getKey());
                             urls.put(res.getKey().getDomain(), p);
                             urls.remove(startDomain.getDomain());
                             startDomain=res.getKey();
                             baseDomain=extractBaseDomain(this.startDomain.getDomain());
-                        }
+                            //TODO remove leading /..
+
                     }
                     if(p!=null) p.setText(res.getValue());
                 } catch (InterruptedException | ExecutionException e) {
